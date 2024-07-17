@@ -1,13 +1,13 @@
 const { getTransacoesDB, addTransacaoDB, updateTransacaoDB, 
       deleteTransacaoDB, getTransacaoPorCodigoDB } 
-      = require('../usecases/TransacaoUseCases');
+      = require('../usecases/transacaoUseCases');
 
 const getTransacoes = async (request, response) => {
     await getTransacoesDB()
           .then(data => response.status(200).json(data))
           .catch(err => response.status(400).json({
             status : 'error',
-            message : 'Erro ao consultar os Transacaos: ' + err
+            message : 'Erro ao consultar os Transacoes: ' + err
           }))
 }
 

@@ -15,7 +15,7 @@ if (isProduction){
         user : "postgres",
         password : "postgres",
         host : "localhost",
-        database : "budget-buddy",
+        database : "financial-tracker-db",
         port : 5432
     })
 }

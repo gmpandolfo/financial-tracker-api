@@ -3,17 +3,9 @@ const Transacao = require('../entities/Transacao');
 
 const getTransacoesDB = async () => {
     try {
-        const { rows } = await pool.query(`
-        SELECT t.id_transacao as id_transacao, t.valor as valor, 
-        to_char(t.data_transacao, 'YYYY-MM-DD HH24:MI:SS') as data_transacao, 
-        t.especificacao as especificacao, t.id_categoria as id_categoria, 
-        c.nome as categoria_nome
-        FROM transacao t
-        JOIN categoria c ON t.id_categoria = c.id_categoria
-        ORDER BY t.id_transacao`);
-        return rows.map((transacao) =>
-            new Transacao(transacao.id_transacao, transacao.valor,
-                transacao.data_transacao, transacao.especificacao, transacao.id_categoria, transacao.categoria_nome));
+        const { rows } = await pool.query(`SELECT id_transacao, especificacao, valor, 
+                   to_char(data_transacao, 'YYYY-MM-DD') as data_transacao FROM transacao ORDER BY especificacao`);
+        return rows.map((transacao) => new Transacao(transacao.id_transacao, transacao.especificacao, transacao.valor, transacao.data_transacao));
     } catch (err) {
         throw "Erro: " + err;
     }
@@ -21,35 +13,28 @@ const getTransacoesDB = async () => {
 
 const addTransacaoDB = async (body) => {
     try {
-        const { valor, data_transacao, especificacao, id_categoria } = body;
-        const results = await pool.query(`INSERT INTO transacao (valor, data_transacao, especificacao, id_categoria) 
-            VALUES ($1, $2, $3, $4)
-        RETURNING id_transacao, valor, to_char(data_transacao, 'YYYY-MM-DD HH24:MI:SS') as data_transacao, 
-        especificacao, id_categoria`,
-            [valor, data_transacao, especificacao, id_categoria]);
+        const { especificacao, valor, data_transacao } = body;
+
+        const results = await pool.query(`INSERT INTO transacao (especificacao, valor, data_transacao) VALUES ($1, $2, $3) RETURNING id_transacao, especificacao, valor, to_char(data_transacao, 'YYYY-MM-DD') as data_transacao`, [especificacao, valor, data_transacao]);
         const transacao = results.rows[0];
-        return new Transacao(transacao.id_transacao, transacao.valor,
-            transacao.data_transacao, transacao.especificacao, transacao.id_categoria, "");
+        return new Transacao(transacao.id_transacao, transacao.especificacao, transacao.valor, transacao.data_transacao);
     } catch (err) {
-        throw "Erro ao inserir a transação: " + err;
+        throw "Erro ao inserir a transacao: " + err;
     }
 }
 
 const updateTransacaoDB = async (body) => {
     try {
-        const { id_transacao, valor, data_transacao, especificacao, id_categoria } = body;
-        const results = await pool.query(`UPDATE transacao SET valor = $2, 
-            data_transacao = $3, especificacao = $4, id_categoria = $5, data_transacao = CURRENT_TIMESTAMP
-        WHERE id_transacao = $1 
-        RETURNING id_transacao, valor, to_char(data_transacao, 'YYYY-MM-DD HH24:MI:SS') as data_transacao, 
-        especificacao, id_categoria`,
-            [id_transacao, valor, data_transacao, especificacao, id_categoria]);
+        const { id_transacao, especificacao, valor, data_transacao } = body;
+
+        const results = await pool.query(`UPDATE transacao SET valor = $3, data_transacao = $4, especificacao = $2 WHERE id_transacao = $1 RETURNING id_transacao, especificacao, valor, to_char(data_transacao, 'YYYY-MM-DD') as data_transacao`,
+        [id_transacao, especificacao, valor, data_transacao]);
+
         if (results.rowCount == 0) {
-            throw `Nenhum registro encontrado com o código ${id_transacao} para ser alterado`;
+            throw `Nenhum registro encontrado com o código ${id_categoria} para ser alterado`;
         }
         const transacao = results.rows[0];
-        return new Transacao(transacao.id_transacao, transacao.valor,
-            transacao.data_transacao, transacao.especificacao, transacao.id_categoria, "");
+        return new Transacao(transacao.id_transacao, transacao.especificacao, transacao.valor, transacao.data_transacao);
     } catch (err) {
         throw "Erro ao alterar a transação: " + err;
     }
@@ -57,8 +42,7 @@ const updateTransacaoDB = async (body) => {
 
 const deleteTransacaoDB = async (id_transacao) => {
     try {
-        const results = await pool.query(`DELETE FROM transacao
-        WHERE id_transacao = $1`, [id_transacao]);
+       const results = await pool.query(`DELETE FROM transacao WHERE id_transacao = $1`, [id_transacao]);
         if (results.rowCount == 0) {
             throw `Nenhum registro encontrado com o código ${id_transacao} para ser removido`;
         } else {
@@ -71,18 +55,15 @@ const deleteTransacaoDB = async (id_transacao) => {
 
 const getTransacaoPorCodigoDB = async (id_transacao) => {
     try {
-        const results = await pool.query(`SELECT t.id_transacao as id_transacao, 
-            t.valor as valor, to_char(t.data_transacao, 'YYYY-MM-DD HH24:MI:SS') as data_transacao, 
-            t.especificacao as especificacao, t.id_categoria as id_categoria, 
-            c.nome as categoria_nome
-            FROM transacao t JOIN categoria c ON t.id_categoria = c.id_categoria
-            WHERE t.id_transacao = $1`, [id_transacao]);
-        if (results.rowCount == 0) {
+        const results = await pool.query(`SELECT id_transacao, especificacao, valor, 
+        to_char(data_transacao, 'YYYY-MM-DD') as data_transacao FROM transacao 
+        WHERE id_transacao = $1`, [id_transacao]);
+
+        if(results.rowCount == 0) {
             throw `Nenhum registro encontrado com o código ${id_transacao}`;
         } else {
             const transacao = results.rows[0];
-            return new Transacao(transacao.id_transacao, transacao.valor,
-                transacao.data_transacao, transacao.especificacao, transacao.id_categoria, transacao.categoria_nome);
+            return new Transacao(transacao.id_transacao, transacao.especificacao, transacao.valor, transacao.data_transacao);
         }
     } catch (err) {
         throw "Erro ao recuperar a transação: " + err;
@@ -90,6 +71,9 @@ const getTransacaoPorCodigoDB = async (id_transacao) => {
 }
 
 module.exports = {
-    getTransacoesDB, addTransacaoDB, updateTransacaoDB, deleteTransacaoDB, 
+    getTransacoesDB, 
+    addTransacaoDB, 
+    updateTransacaoDB, 
+    deleteTransacaoDB,
     getTransacaoPorCodigoDB
 }
