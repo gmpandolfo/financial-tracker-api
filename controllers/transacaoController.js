@@ -14,7 +14,7 @@ const getTransacoes = async (request, response) => {
 const addTransacao = async (request, response) => {
     await addTransacaoDB(request.body)
           .then(data => response.status(200).json({
-                status : "success", message : "Transacao criado",
+                status : "success", message : "Transacao criada",
                 objeto : data
           }))
           .catch(err => response.status(400).json({
